@@ -1,0 +1,15 @@
+html,body,#root{height:100%;}
+body{font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans SC", "Helvetica Neue", Arial;}
+/* draggable area for Electron */
+.window-drag{ -webkit-app-region: drag; }
+.window-btn{ -webkit-app-region: no-drag; }
+
+/* floating draggable box when running in a regular browser */
+.floating {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 9999;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}

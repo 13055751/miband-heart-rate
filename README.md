@@ -1,14 +1,12 @@
-# MiBand Heart Rate Demo
+# MiBand Heart Rate for OBS
 
-> For miband 4~7, checkout `miband-4-to-7` tag
+> This edition listening at <http://127.0.0.1:3030> so you can use it on OBS browser source.
 >
-> 对于小米手环 4~7，请切换到 `miband-4-to-7` 标签
+> 该版本在 <http://127.0.0.1:3030> 监听HTTP请求，你可以在 OBS 中将其添加为浏览器源。以在直播时显示心率。
 
 A Demo of reading "Shear heart rate data" of Xiaomi Smart Band 10. Enable the option in official App is required.
 
 接收小米手环10 “运动心率广播” Demo，需在手环设置-心率广播中开启广播功能。
-
-欢迎二次开发。
 
 ## Supported Platform
 

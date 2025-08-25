@@ -1,0 +1,26 @@
+{
+  "name": "miband-gui-overlay",
+  "version": "0.1.0",
+  "private": true,
+  "main": "electron-main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 5174",
+    "electron-dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "electron": "^26.0.0",
+    "electron-builder": "^24.6.0",
+    "wait-on": "^7.0.1",
+    "vite": "^5.0.0",
+    "@vitejs/plugin-react": "^4.0.0"
+  },
+  "build": {
+    "appId": "com.example.miband-gui",
+    "files": ["dist/**", "electron-main.js", "package.json"]
+  }
+}

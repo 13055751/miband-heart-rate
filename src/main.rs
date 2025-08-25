@@ -1,19 +1,57 @@
-#![feature(never_type)]
-
 use std::error::Error;
+use std::net::SocketAddr;
 
 use bluest::{btuuid::bluetooth_uuid_from_u16, Adapter, Device, Uuid};
 use futures_lite::stream::StreamExt;
+use serde::Serialize;
+use tokio::sync::watch::{self, Receiver, Sender};
+use warp::Filter;
 
 const HRS_UUID: Uuid = bluetooth_uuid_from_u16(0x180D);
 const HRM_UUID: Uuid = bluetooth_uuid_from_u16(0x2A37);
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() {
+    let (tx, rx) = watch::channel(HeartRate {
+        value: 0,
+        sensor_contact: None,
+    });
+    let result = tokio::join!(ble_scanner(tx), web_server(rx));
+    println!("{result:?}");
+}
+
+#[derive(Serialize)]
+struct HeartRate {
+    value: u16,
+    sensor_contact: Option<bool>,
+}
+
+async fn web_server(rx: Receiver<HeartRate>) -> Result<(), Box<dyn Error>> {
+    let root = warp::path::end().map(|| warp::reply::html(include_str!("../web/index.html")));
+    let heartrate = warp::path!("heartrate").then(move || {
+        let mut rx = rx.clone();
+        async move {
+            drop(rx.borrow_and_update());
+            rx.changed().await.unwrap();
+            warp::reply::json(&rx.borrow().value)
+        }
+    });
+
+    let socket_addr: SocketAddr = ([127, 0, 0, 1], 3030).into();
+    println!("Start listening at http://{socket_addr:?}");
+
+    warp::serve(warp::get().and(root).or(heartrate))
+        .run(socket_addr)
+        .await;
+    Err("Server stopped".into())
+}
+
+async fn ble_scanner(tx: Sender<HeartRate>) -> Result<(), Box<dyn Error>> {
     let adapter = Adapter::default()
         .await
-        .ok_or("Bluetooth adapter not found")?;
-    adapter.wait_available().await?;
+        .ok_or("Bluetooth adapter not found")
+        .unwrap();
+    adapter.wait_available().await.unwrap();
 
     loop {
         let device = {
@@ -33,12 +71,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             }
         };
 
-        let Err(err) = handle_device(&adapter, &device).await;
-        println!("Connection error: {err:?}");
+        if let Err(err) = handle_device(&adapter, &device, &tx).await {
+            println!("Connection error: {err:?}");
+        }
     }
 }
 
-async fn handle_device(adapter: &Adapter, device: &Device) -> Result<!, Box<dyn Error>> {
+async fn handle_device(
+    adapter: &Adapter,
+    device: &Device,
+    tx: &Sender<HeartRate>,
+) -> Result<(), Box<dyn Error>> {
     // Connect
     if !device.is_connected().await {
         println!("Connecting device: {}", device.id());
@@ -75,6 +118,10 @@ async fn handle_device(adapter: &Adapter, device: &Device) -> Result<!, Box<dyn 
             sensor_contact = Some(flag & 0b00010 != 0)
         }
         println!("HeartRateValue: {heart_rate_value}, SensorContactDetected: {sensor_contact:?}");
+        tx.send(HeartRate {
+            value: heart_rate_value,
+            sensor_contact,
+        })?;
     }
     Err("No longer heart rate notify".into())
 }
